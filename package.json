@@ -1,0 +1,11 @@
+{
+  "name": "authentication-security-website",
+  "version": "1.0.0",
+  "description": "Authentication & Security Web App Practice",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gabriel A. Rocha",
+  "license": "ISC"
+}
