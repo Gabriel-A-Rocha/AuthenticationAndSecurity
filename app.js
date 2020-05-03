@@ -3,6 +3,7 @@
 //importing external modules
 const express = require('express');
 const ejs = require('ejs');
+const mongoose = require('mongoose');
 
 //starting server
 const app = express();
@@ -16,11 +17,25 @@ app.use(express.static('public'));
 //define app settings
 app.set('view engine', 'ejs');
 
+//database setup
+mongoose.connect('mongodb://localhost:27017/usersDB', {useNewUrlParser: true, useUnifiedTopology: true});
+
+//schema creation
+const userSchema = new mongoose.Schema({
+  email: String,
+  password: String
+});
+
+//model to manage a 'users' collection
+const User = mongoose.model('User', userSchema);
+
+
 //root route
 app.route('/')
 
   .get( (req, res) => {
     res.render('home');
+    console.log(testDoc);
   })
 
   .post( (req, res) => {
@@ -28,21 +43,50 @@ app.route('/')
   });
 
 //login route
-app.get('/login', (req, res) => {
+app.route('/login')
+
+.get( (req, res) => {
   res.render('login');
-});
+})
+
+.post( (req, res) => {
+  User.findOne({email: req.body.email}, (err, userFound) => {
+    if(err){
+      console.log(err);
+    } else {
+      if(userFound){
+        if(userFound.password === req.body.password){
+          res.render('secrets');
+        }
+      }
+    }
+  });
+}); 
 
 //register route
-app.get('/register', (req, res) => {
+app.route('/register')
+
+.get( (req, res) => {
   res.render('register');
+})
+
+.post( (req, res) => {
+
+  const newUser = new User({
+    email: req.body.email,
+    password: req.body.password
+  });
+  newUser.save( (err) => {
+    if(err){
+      console.log(err);
+    } else {
+      res.render('secrets');
+    }
+  });
+
 });
 
 //submit route
 app.get('/submit', (req, res) => {
   res.render('submit');
-});
-
-//secrets route
-app.get('/secrets', (req, res) => {
-  res.render('secrets');
 });
