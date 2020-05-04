@@ -4,6 +4,7 @@
 const express = require('express');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
+const encrypt = require('mongoose-encryption');
 
 //starting server
 const app = express();
@@ -26,8 +27,18 @@ const userSchema = new mongoose.Schema({
   password: String
 });
 
+//'secret' string to act as the encryption key
+const secret = 'Thisisourlittlesecret.';
+
+//adding encryption to the Schema
+userSchema.plugin(encrypt, {
+  secret: secret,
+  encryptedFields: ['password']
+});
+
 //model to manage a 'users' collection
 const User = mongoose.model('User', userSchema);
+
 
 
 //root route
@@ -61,7 +72,7 @@ app.route('/login')
       }
     }
   });
-}); 
+});
 
 //register route
 app.route('/register')
