@@ -1,5 +1,8 @@
 //jshint esversion:6
 
+//importing environment variables
+require('dotenv').config();
+
 //importing external modules
 const express = require('express');
 const ejs = require('ejs');
@@ -27,12 +30,9 @@ const userSchema = new mongoose.Schema({
   password: String
 });
 
-//'secret' string to act as the encryption key
-const secret = 'Thisisourlittlesecret.';
-
 //adding encryption to the Schema
 userSchema.plugin(encrypt, {
-  secret: secret,
+  secret: process.env.SECRET,
   encryptedFields: ['password']
 });
 
@@ -46,7 +46,6 @@ app.route('/')
 
   .get( (req, res) => {
     res.render('home');
-    console.log(testDoc);
   })
 
   .post( (req, res) => {
