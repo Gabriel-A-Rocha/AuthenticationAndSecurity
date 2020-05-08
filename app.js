@@ -11,6 +11,11 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
+const findOrCreate = require('mongoose-findorcreate');
+
+
 
 //starting server
 const app = express();
@@ -46,21 +51,58 @@ mongoose.connect('mongodb://localhost:27017/usersDB', {
 //schema creation
 const userSchema = new mongoose.Schema({
   email: String,
-  password: String
+  password: String,
+  googleId: String
 });
 
 //inserting plugin to hash and salt registrations
 userSchema.plugin(passportLocalMongoose);
 
+//method for Google authentication with OAuth
+userSchema.plugin(findOrCreate);
+
 //model to manage a 'users' collection
 const User = mongoose.model('User', userSchema);
 
-
 passport.use(User.createStrategy());
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
 
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
+});
+
+//Google Login Strategy setup
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: 'http://localhost:3000/auth/google/secrets',
+    userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    console.log(profile);
+    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
+
+//Facebook login strategy setup
+passport.use(new FacebookStrategy({
+    clientID: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    callbackURL: "http://localhost:3000/auth/facebook/secrets"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
 
 //root route
 app.route('/')
@@ -94,7 +136,6 @@ app.route('/register')
         });
       }
     });
-
   });
 
 
@@ -110,7 +151,6 @@ app.route('/login')
       password: req.body.password
     });
     req.login(user, function(err){
-      console.log('entrou no login');
       if(err){
         console.log(err);
       } else {
@@ -142,7 +182,36 @@ app.get('/secrets', (req, res) => {
 });
 
 //logout route
+
 app.get('/logout', (req, res) => {
   req.logout();
   res.redirect('/');
 });
+
+
+//Google authentication route
+
+app.get('/auth/google',
+  //this line brings the Google login page
+  passport.authenticate('google', { scope: ['profile'] })
+);
+
+app.get('/auth/google/secrets',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect to the secrets page
+    res.redirect('/secrets');
+  });
+
+
+//Facebook authentication route
+
+app.get('/auth/facebook',
+  passport.authenticate('facebook'));
+
+app.get('/auth/facebook/secrets',
+  passport.authenticate('facebook', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/');
+  });
